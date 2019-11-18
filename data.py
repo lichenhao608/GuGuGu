@@ -3,13 +3,15 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def load_data(label_file, img_dir):
+def load_data(label_file, img_dir, num=None):
     '''
     Convert image file into numpy array
 
     Args:
         label_file: file directory to the csv file containing label info
         img_dir: repository containing images
+        num: number of file to load, if None, all files will be loaded, defualt
+            None
 
     Return:
         images: (N, 96, 96) shape image file
@@ -20,7 +22,10 @@ def load_data(label_file, img_dir):
     y = label['label'].values
     N = len(label)
 
-    images = np.zeros((N, 96, 96))
+    if not num:
+        num = N
+
+    images = np.zeros((num, 96, 96))
 
     for i, name in enumerate(label['id'].values):
         img_file = img_dir + name + '.tif'
@@ -30,5 +35,8 @@ def load_data(label_file, img_dir):
 
         if i % 2000 == 0:
             print(f'process {i} images')
+
+        if i + 1 == num:
+            break
 
     return images, y

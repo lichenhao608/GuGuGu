@@ -5,7 +5,7 @@ from data import load_data
 
 
 if __name__ == "__main__":
-    data, y = load_data('data/train_labels.csv', 'data/train/')
+    data, y = load_data('data/train_labels.csv', 'data/train/', num=50000)
 
     model = RandomForestClassifier()
     effect_area = data[:, 32:64, 32:64]
