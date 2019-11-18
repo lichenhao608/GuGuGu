@@ -25,13 +25,14 @@ def load_data(label_file, img_dir, num=None):
     if not num:
         num = N
 
-    images = np.zeros((num, 96, 96))
+    images = np.zeros((num, 3, 96, 96))
 
     for i, name in enumerate(label['id'].values):
         img_file = img_dir + name + '.tif'
         img = plt.imread(img_file)
+        images[i] = img.reshape((3, 96, 96)) / 255
         # convert image to grayscale
-        images[i] = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
+        # images[i] = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
 
         if i % 2000 == 0:
             print(f'process {i} images')
@@ -39,4 +40,4 @@ def load_data(label_file, img_dir, num=None):
         if i + 1 == num:
             break
 
-    return images, y
+    return images, y[:num]
