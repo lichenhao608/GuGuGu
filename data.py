@@ -28,7 +28,7 @@ def load_data(label_file, img_dir):
         # convert image to grayscale
         images[i] = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
 
-        if i % 10000 == 0:
+        if i % 2000 == 0:
             print(f'process {i} images')
 
     return images, y
