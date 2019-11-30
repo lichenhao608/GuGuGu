@@ -10,7 +10,7 @@ from skimage import io, transform
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler
 from torchvision import transforms, utils
 
 import warnings
@@ -43,9 +43,10 @@ class CellImgDataset(Dataset):
             index = index.tolist()
 
         img_name = os.path.join(
-            self.root_dir, self.cellimg_frame.iloc[index, 0])
+            self.root_dir, self.cellimg_frame.iloc[index, 0]+'.tif')
         image = io.imread(img_name)
         label = self.cellimg_frame.iloc[index, 1]
+        label = np.array(label)
         sample = {'image': image, 'label': label}
 
         if self.transform:
@@ -126,8 +127,68 @@ class ToTensor(object):
         # numpy image: H x W x C
         # torch image: C X H X W
         image = image.transpose((2, 0, 1))
-        return {'image': torch.from_numpy(image),
-                'label': torch.from_numpy(label)}
+        return {'image': torch.from_numpy(image).float(),
+                'label': torch.from_numpy(label).long()}
+
+
+def train_test_loader(csv_file, root_dir, batch_size=4, shuffle=True,
+                      num_workers=4, pin_memory=False, transform=None, train_size=1.0):
+    '''Get training and testing dataloader from the data
+        Original Source from @kevinzakka
+        https://gist.github.com/kevinzakka/d33bf8d6c7f06a9d8c76d97a7879f5cb
+
+    Args:
+        csv_file (string): Path to the csv file with annotations.
+        root_dir (string): Directory with all the training images.
+        batch_size (int, optional): How many samples per batch to load.
+        shuffle (bool, optional): whether to shuffle the train/test indices.
+        num_workers (int, optional): number of subprocesses to use when loading the
+        dataset.
+        pin_memory (bool, optional):  If True, the data loader will copy Tensors
+            into CUDA pinned memory before returning them. 
+        transform (callable, optional): Optional transform to be applied on
+            a sample.
+        train_size (float, optional): Train set size in range (0, 1]. 1 means no
+            test set. Default is 1.
+
+    Returns:
+        train_loader (Dataloader): Training set Dataloader
+        test_loader (Dataloader): Testing set Dataloader. Retuen None if
+            train_size is 1.
+    '''
+    assert 0.0 < train_size <= 1.0
+
+    train_dataset = CellImgDataset(csv_file, root_dir, transform=transform)
+    test_dataset = CellImgDataset(
+        csv_file, root_dir, transform=transforms.Compose([ToTensor()]))
+
+    N = len(train_dataset)
+    indices = np.arange(N)
+    split = int(np.floor(train_size * N))
+
+    if shuffle:
+        np.random.shuffle(indices)
+
+    train_ind, test_ind = indices[:split], indices[split:]
+    train_sampler = SubsetRandomSampler(train_ind)
+    if train_size < 1:
+        test_sampler = SubsetRandomSampler(test_ind)
+
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size,
+        sampler=train_sampler, num_workers=num_workers,
+        pin_memory=pin_memory
+    )
+    if train_size < 1:
+        test_loader = DataLoader(
+            test_dataset, batch_size=batch_size,
+            sampler=test_sampler, num_workers=num_workers,
+            pin_memory=pin_memory
+        )
+    else:
+        test_loader = None
+
+    return train_loader, test_loader
 
 
 def load_data(label_file, img_dir, num=None):

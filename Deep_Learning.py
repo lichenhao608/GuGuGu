@@ -1,7 +1,7 @@
-from data import load_data
+import projutils
 import torch
 import torchvision
-import torchvision.transforms as transforms
+from torchvision import transforms
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
@@ -47,24 +47,27 @@ optimizer = optim.SGD(model.parameters(), lr=0.05, momentum=0.9)
 
 def train():
 
-    data, y = load_data(label_file, train_path, num=1000)
-    data = torch.from_numpy(data).float().to(device)
-    y = torch.from_numpy(y).long().to(device)
-    data = data.permute(0, 3, 1, 2)
-    # train, test, y_train, y_test = train_test_split(data, y, train_size=0.8)
-    # train, y_train = torch.from_numpy(train), torch.from_numpy(y_train)
+    train, test = projutils.train_test_loader(
+        label_file, train_path, transform=transforms.Compose([projutils.ToTensor()]))
 
     for epoch in range(2):
         running_loss = 0.0
-        inputs, labels = Variable(data), Variable(y)
-        optimizer.zero_grad()
+        for i, data in enumerate(train):
+            inputs, labels = data['image'], data['label']
+            inputs, labels = Variable(inputs), Variable(labels)
 
-        outputs = model(data)
-        loss = criterion(outputs, y)
-        loss.backward()
-        optimizer.step()
+            optimizer.zero_grad()
 
-        running_loss += loss.data[0]
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.data[0]
+            if i % 2000 == 1999:
+                print('[%d, %5d] loss: %.3f' %
+                      (epoch + 1, i + 1, running_loss / 2000))
+                running_loss = 0.0
 
 
 if __name__ == "__main__":
