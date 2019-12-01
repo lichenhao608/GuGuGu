@@ -1,4 +1,6 @@
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
 from torch import optim, nn
 from torch.autograd import Variable
 from torchvision import transforms
@@ -17,10 +19,18 @@ if __name__ == "__main__":
 
     t = transforms.Compose([projutils.ToTensor()])
     train, test = projutils.train_test_loader(
-        label_file, train_path, transform=t, train_size=0.1)
+        label_file, train_path, transform=t, train_size=0.8)
 
-    for epoch in range(2):
+    loss_value = np.zeros(1000)
+    test_acc = np.zeros(1000)
+    train_acc = np.zeros(1000)
+    for epoch in range(1000):
         running_loss = 0.0
+        total_loss = 0
+        train_correct = 0
+        test_correct = 0
+        train_total = 0
+        test_total = 0
         for i, data in enumerate(train):
             inputs, labels = data['image'], data['label']
             inputs, labels = inputs.to(device), labels.to(device)
@@ -34,7 +44,31 @@ if __name__ == "__main__":
             optimizer.step()
 
             running_loss += loss.item()
+            total_loss += loss.item()
+            train_total += labels.size(0)
+            _, predicted = torch.max(outputs.data, 1)
+            train_correct += (predicted == labels).sum().item()
             if i % 2000 == 1999:
                 print('[%d, %5d] loss: %.3f' %
                       (epoch + 1, i + 1, running_loss / 2000))
                 running_loss = 0.0
+
+        for i, data in enumerate(test):
+            inputs, labels = data['image'], data['label']
+            inputs, labels = inputs.to(device), labels.to(device)
+            inputs, labels = Variable(inputs), Variable(labels)
+
+            outputs = model(inputs)
+
+            _, predicted = torch.max(outputs.data, 1)
+            test_total += labels.size(0)
+            test_correct += (predicted == labels).sum().item()
+
+        loss_value[epoch] = total_loss
+        test_acc[epoch] = test_correct / test_total
+        train_acc[epoch] = train_correct / train_total
+
+    plt.plot(np.arange(1000), loss_value)
+    plt.plot(np.arange(1000), test_acc)
+    plt.plot(np.arange(1000), train_acc)
+    plt.show()
