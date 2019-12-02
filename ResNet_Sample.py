@@ -90,7 +90,7 @@ def train(label_file, train_path, load_file='', num_step=10):
         loss_value[epoch] = total_loss
         test_acc[epoch] = test_correct / test_total
         train_acc[epoch] = train_correct / train_total
-        torch.save({'epoch': epoch+init_epoch,
+        torch.save({'epoch': epoch+init_epoch+1,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': criterion.state_dict()}, load_file)
@@ -101,8 +101,10 @@ def train(label_file, train_path, load_file='', num_step=10):
 if __name__ == "__main__":
     label_file = 'data/train_labels.csv'
     train_path = 'data/train/'
+    save_file = 'state.pt'
 
-    steps, loss_value, train_acc, test_acc = train(label_file, train_path)
+    steps, loss_value, train_acc, test_acc = train(
+        label_file, train_path, load_file=save_file)
 
     plt.plot(np.arange(steps), loss_value)
     plt.plot(np.arange(steps), test_acc)
