@@ -131,7 +131,7 @@ class ToTensor(object):
                 'label': torch.from_numpy(label).long()}
 
 
-def train_test_loader(csv_file, root_dir, batch_size=4, shuffle=True,
+def train_test_loader(csv_file, root_dir, seed=0, batch_size=4, shuffle=True,
                       num_workers=4, pin_memory=False, transform=None, train_size=1.0):
     '''Get training and testing dataloader from the data
         Original Source from @kevinzakka
@@ -140,6 +140,7 @@ def train_test_loader(csv_file, root_dir, batch_size=4, shuffle=True,
     Args:
         csv_file (string): Path to the csv file with annotations.
         root_dir (string): Directory with all the training images.
+        seed (int, optional): Set seed for redoable result.
         batch_size (int, optional): How many samples per batch to load.
         shuffle (bool, optional): whether to shuffle the train/test indices.
         num_workers (int, optional): number of subprocesses to use when loading the
@@ -167,6 +168,7 @@ def train_test_loader(csv_file, root_dir, batch_size=4, shuffle=True,
     split = int(np.floor(train_size * N))
 
     if shuffle:
+        np.random.seed(seed)
         np.random.shuffle(indices)
 
     train_ind, test_ind = indices[:split], indices[split:]
