@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from data import load_data
+from projutils import load_data
 
 
 if __name__ == "__main__":
@@ -14,4 +14,4 @@ if __name__ == "__main__":
         effect_area, y, train_size=0.8)
 
     model.fit(train, y_train)
-    model.score(test, y_test)
+    print(model.score(test, y_test))
