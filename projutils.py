@@ -114,7 +114,26 @@ class RandomCrop(object):
 
         image = image[top:(top + new_h), left:(left + new_w)]
 
-        return {'image': img, 'label': label}
+        return {'image': imaga, 'label': label}
+
+
+class RandomHorizontalFlip(object):
+    '''Randomly flip image horizontally'''
+
+    def __init__(self, p=0.5):
+        '''
+        Args:
+            p (float, optional): The probability that image will flip
+        '''
+        assert 0 <= p < 1
+        self.p = p
+
+    def __call__(self, sample):
+        image, label = sample['image'], sample['label']
+
+        image = np.flip(image, axis=1).copy()
+
+        return {'image': image, 'label': label}
 
 
 class ToTensor(object):

@@ -5,12 +5,13 @@ from torch import optim, nn
 from torch.autograd import Variable
 from torchvision import transforms
 from torchvision.models import resnet50
+from torch.utils.tensorboard import SummaryWriter
 import projutils
 
 device = torch.device('cuda:0')
 
 
-def train(label_file, train_path, load_file='', num_step=10):
+def train(label_file, train_path, tensorboard_file='tensorboard', load_file='', num_step=10):
     '''Train the neural networks
 
     Args:
@@ -31,23 +32,20 @@ def train(label_file, train_path, load_file='', num_step=10):
     optimizer = optim.SGD(model.parameters(), lr=0.05, momentum=0.9)
     criterion = nn.CrossEntropyLoss()
     init_epoch = 0
+    tensorb = SummaryWriter(log_dir=tensorboard_file)
 
     if load_file:
         checkpoint = torch.load(load_file)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         init_epoch = checkpoint['epoch']
-        criterion.load_state_dict(checkpoint['loss'])
 
-    t = transforms.Compose([projutils.ToTensor()])
+    t = transforms.Compose([projutils.RandomCrop(
+        64), projutils.RandomHorizontalFlip(), projutils.ToTensor()])
     train, test = projutils.train_test_loader(
-        label_file, train_path, transform=t, train_size=0.8)
+        label_file, train_path, seed=0, transform=t, train_size=0.8)
 
-    loss_value = np.zeros(num_step)
-    test_acc = np.zeros(num_step)
-    train_acc = np.zeros(num_step)
-
-    for epoch in range(10):
+    for epoch in range(num_step):
         running_loss = 0.0
         total_loss = 0
         train_correct = 0
@@ -74,6 +72,10 @@ def train(label_file, train_path, load_file='', num_step=10):
             if i % 2000 == 1999:
                 print('[%d, %5d] loss: %.3f' %
                       (epoch + 1, i + 1, running_loss / 2000))
+                tensorb.add_scalar(
+                    'Loss/single_loss', running_loss / 2000,
+                    k, epoch + init_epoch)
+                k += 1
                 running_loss = 0.0
 
         for i, data in enumerate(test):
@@ -87,26 +89,29 @@ def train(label_file, train_path, load_file='', num_step=10):
             test_total += labels.size(0)
             test_correct += (predicted == labels).sum().item()
 
-        loss_value[epoch] = total_loss
-        test_acc[epoch] = test_correct / test_total
-        train_acc[epoch] = train_correct / train_total
+        tensorb.add_scalar('Loss', total_loss, init_epoch+epoch)
+        tensorb.add_scalar('Accuracy/test',
+                           test_correct / test_total,
+                           init_epoch + epoch
+                           )
+        tensorb.add_scalar('Accuracy/train',
+                           train_correct / train_total,
+                           init_epoch + epoch
+                           )
+
         torch.save({'epoch': epoch+init_epoch+1,
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
-                    'loss': criterion.state_dict()}, load_file)
+                    'loss': loss,
+                    'k': k+1}, load_file)
 
-    return num_step, loss_value, train_acc, test_acc
+    tensorb.close()
 
 
 if __name__ == "__main__":
     label_file = 'data/train_labels.csv'
     train_path = 'data/train/'
-    save_file = 'state.pt'
+    load_file = 'state.pt'
 
     steps, loss_value, train_acc, test_acc = train(
-        label_file, train_path, load_file=save_file)
-
-    plt.plot(np.arange(steps), loss_value)
-    plt.plot(np.arange(steps), test_acc)
-    plt.plot(np.arange(steps), train_acc)
-    plt.show()
+        label_file, train_path, load_file=load_file)
