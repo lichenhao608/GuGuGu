@@ -150,7 +150,7 @@ class ToTensor(object):
                 'label': torch.from_numpy(label).long()}
 
 
-def train_test_loader(csv_file, root_dir, seed=0, batch_size=4, shuffle=True,
+def train_test_loader(csv_file, root_dir, seed=None, batch_size=4, shuffle=True,
                       num_workers=4, pin_memory=False, transform=None, train_size=1.0):
     '''Get training and testing dataloader from the data
         Original Source from @kevinzakka
@@ -187,7 +187,8 @@ def train_test_loader(csv_file, root_dir, seed=0, batch_size=4, shuffle=True,
     split = int(np.floor(train_size * N))
 
     if shuffle:
-        np.random.seed(seed)
+        if seed is not None:
+            np.random.seed(seed)
         np.random.shuffle(indices)
 
     train_ind, test_ind = indices[:split], indices[split:]
@@ -232,14 +233,13 @@ def load_data(label_file, img_dir, num=None):
     if not num:
         num = N
 
-    images = np.zeros((num, 96, 96, 3))
+    images = np.zeros((num, 96, 96))
 
     for i, name in enumerate(label['id'].values):
         img_file = img_dir + name + '.tif'
         img = plt.imread(img_file)
-        images[i] = img / 255
         # convert image to grayscale
-        # images[i] = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
+        images[i] = np.dot(img[..., :3], [0.2989, 0.5870, 0.1140])
 
         if i % 2000 == 0:
             print(f'process {i} images')
