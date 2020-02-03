@@ -33,12 +33,14 @@ def train(label_file, train_path, tensorboard_file='tensorboard', load_file='', 
     criterion = nn.CrossEntropyLoss()
     init_epoch = 0
     tensorb = SummaryWriter(log_dir=tensorboard_file)
+    k = 0
 
     if load_file:
         checkpoint = torch.load(load_file)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         init_epoch = checkpoint['epoch']
+        k = checkpoint['k']
 
     t = transforms.Compose([projutils.RandomCrop(
         64), projutils.RandomHorizontalFlip(), projutils.ToTensor()])
@@ -103,7 +105,7 @@ def train(label_file, train_path, tensorboard_file='tensorboard', load_file='', 
                     'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict(),
                     'loss': loss,
-                    'k': k+1}, load_file)
+                    'k': k}, load_file)
 
     tensorb.close()
 
